@@ -1,7 +1,4 @@
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-
 public class Snake {
 
     public boolean alive;
@@ -17,8 +14,13 @@ public class Snake {
         this.snakeCoords = new ArrayList<String>();
     }
     
-    public void update(String snakeLine){
+    /**
+    Update snake information and return updated board with snake drawn on it
+    */
+    public int[][] update(String snakeLine, int[][] board){
+
         this.snakeLine = snakeLine;
+
         // clear previous information
         int headIndex = 3;
         snakeCoords.clear();
@@ -28,10 +30,10 @@ public class Snake {
         String[] snakeInfo = snakeLine.split(" ");
         if(snakeInfo[0].equals("dead")){
             this.alive = false;
-            return;
+            return board;
         }
         if(snakeInfo[0].equals("invisible")){
-            headIndex = 4;
+            headIndex = 5;
         }
         this.length = Integer.parseInt(snakeInfo[1]);
         this.kills = Integer.parseInt(snakeInfo[2]);
@@ -40,39 +42,46 @@ public class Snake {
         for(int i = headIndex; i < snakeInfo.length; i++){
             snakeCoords.add(snakeInfo[i]);
         }
+
+        // update board with snake
+        board = drawSnake(board);
+        return board;
     }
     
-    private Map<String, Integer> directions = new HashMap<String, Integer>() {{
-        put("up", 0);
-        put("down", 1);
-        put("left", 2);
-        put("right", 3);
-        put("unknown", -1);
-    }};
-
-    public int calcCurrDirection(){
-        // when enemy snake is invis
-        if(snakeCoords.size() == 1){
-            return directions.get("unknown");
+    private int[][] drawSnake(int[][] board){
+        // loop through each bend
+        for(int i = 0; i < snakeCoords.size() - 1; i++){
+            board = drawLine(board, snakeCoords.get(i), snakeCoords.get(i + 1), 1);
         }
-
-        // get x, y coords of head
-        String[] sHead = snakeCoords.get(0).split(",");
-        int[] head = {Integer.parseInt(sHead[0]), Integer.parseInt(sHead[1])};
-
-        // get x, y coords of first bend
-        String[] sBend = snakeCoords.get(1).split(",");
-        int[] bend = {Integer.parseInt(sBend[0]), Integer.parseInt(sBend[1])};
-
-        if(head[0] == bend[0] && head[1] < bend[1]){
-            return directions.get("up");
-        }else if(head[0] == bend[0] && head[1] > bend[1]){
-            return directions.get("down");
-        }else if(head[1] == bend[1] && head[0] < bend[0]){
-            return directions.get("left");
-        }else{
-            return directions.get("right");
+        return board;
+    }
+    
+    private int[][] drawLine(int[][] board, String s1, String s2, int num){
+        String[] p1 = s1.split(",");
+        String[] p2 = s2.split(",");
+        
+        int x1 = Integer.parseInt(p1[1]);
+        int x2 = Integer.parseInt(p2[1]);
+        
+        int y1 = Integer.parseInt(p1[0]);
+        int y2 = Integer.parseInt(p2[0]);
+        
+        if(x1 > x2){ x2 = swap(x1, x1 = x2);}
+        if(y1 > y2){ y2 = swap(y1, y1 = y2);}
+        
+        for(int row = x1; row <= x2; row++){
+            board[row][y1] = num;
         }
+        
+        for(int col = y1; col <= y2; col++){
+            board[x1][col] = num;
+        }
+        
+        return board;
+    }
+    
+    private static int swap(int a, int b) {  // usage: y = swap(x, x=y);
+        return a;
     }
 
     public int[] getHeadPos(){
@@ -80,4 +89,10 @@ public class Snake {
         int[] head = {Integer.parseInt(sHead[0]), Integer.parseInt(sHead[1])};
         return head;
     }
+
+    public int[] getTailPos(){
+        String[] sTail = snakeCoords.get(snakeCoords.size() - 1).split(",");
+        int[] tail = {Integer.parseInt(sTail[0]), Integer.parseInt(sTail[1])};
+        return tail;
+    }    
 }
