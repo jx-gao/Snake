@@ -1,8 +1,10 @@
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 public class Snake {
 
-    public boolean alive;
-    public int length, kills;
+    public boolean alive, invisible;
+    public int length, kills, topLength;
     public ArrayList<String> snakeCoords;
     public int currDirection;
     public String snakeLine; //use this to debug
@@ -12,6 +14,7 @@ public class Snake {
         this.length = 0;
         this.kills = 0;
         this.snakeCoords = new ArrayList<String>();
+        this.topLength = 0;
     }
     
     /**
@@ -25,6 +28,7 @@ public class Snake {
         int headIndex = 3;
         snakeCoords.clear();
         this.alive = true;
+        this.invisible = false;
 
         // update with latest information
         String[] snakeInfo = snakeLine.split(" ");
@@ -33,10 +37,15 @@ public class Snake {
             return board;
         }
         if(snakeInfo[0].equals("invisible")){
+            invisible = true;
             headIndex = 5;
         }
-        this.length = Integer.parseInt(snakeInfo[1]);
-        this.kills = Integer.parseInt(snakeInfo[2]);
+        length = Integer.parseInt(snakeInfo[1]);
+        kills = Integer.parseInt(snakeInfo[2]);
+
+        if (length > topLength){
+            topLength = length;
+        }
         
         // add all snakes coords to arraylist
         for(int i = headIndex; i < snakeInfo.length; i++){
@@ -80,10 +89,6 @@ public class Snake {
         return board;
     }
     
-    private static int swap(int a, int b) {  // usage: y = swap(x, x=y);
-        return a;
-    }
-
     public int[] getHeadPos(){
         String[] sHead = snakeCoords.get(0).split(",");
         int[] head = {Integer.parseInt(sHead[0]), Integer.parseInt(sHead[1])};
@@ -94,5 +99,89 @@ public class Snake {
         String[] sTail = snakeCoords.get(snakeCoords.size() - 1).split(",");
         int[] tail = {Integer.parseInt(sTail[0]), Integer.parseInt(sTail[1])};
         return tail;
-    }    
+    }
+    
+    public int getCurrDir(){
+        // when enemy snake is invis
+        if(snakeCoords.size() == 1){
+            return directions.get("unknown");
+        }
+
+        // get x, y coords of head
+        String[] sHead = snakeCoords.get(0).split(",");
+        int[] head = {Integer.parseInt(sHead[0]), Integer.parseInt(sHead[1])};
+
+        // get x, y coords of first bend
+        String[] sBend = snakeCoords.get(1).split(",");
+        int[] bend = {Integer.parseInt(sBend[0]), Integer.parseInt(sBend[1])};
+
+        if(head[0] == bend[0] && head[1] < bend[1]){
+            return directions.get("up");
+        }else if(head[0] == bend[0] && head[1] > bend[1]){
+            return directions.get("down");
+        }else if(head[1] == bend[1] && head[0] < bend[0]){
+            return directions.get("left");
+        }else{
+            return directions.get("right");
+        }
+    }
+
+    public int[][] markTailWalkable(int[][] board){
+        int x = getTailPos()[0], y = getTailPos()[1];
+        board[y][x] = 0;
+        return board;
+    }
+
+    public int[][] markHeadSurr(int[][] board){
+        if(!alive || invisible){
+            return board;
+        }
+        int x = getHeadPos()[0], y = getHeadPos()[1];
+        // ↑
+        if(isTraversable(x, y - 1, board)){
+            board[y - 1][x] = 1;
+        }
+        // ↓
+        if(isTraversable(x, y + 1, board)){
+            board[y + 1][x] = 1;
+        }
+        // ←
+        if(isTraversable(x - 1, y, board)){
+            board[y][x - 1] = 1;
+        }
+        // →
+        if(isTraversable(x + 1, y, board)){
+            board[y][x + 1] = 1;
+        }
+        return board;
+    }
+
+    private boolean isTraversable(int x, int y, int[][] board){
+        if(!(x >= 0 && x <=board[0].length - 1)){
+            return false;
+        }
+        if(!(y >= 0 && y <= board.length - 1)){
+            return false;
+        }
+        return true;
+    }
+
+    // ==== helper methods ====
+
+    private static int swap(int a, int b) {  // usage: y = swap(x, x=y);
+        return a;
+    }
+
+    private Map<String, Integer> directions = new HashMap<String, Integer>() {{
+        put("up", 0);
+        put("down", 1);
+        put("left", 2);
+        put("right", 3);
+        put("relative left", 4);
+        put("straight", 5);
+        put("relative right", 6);
+        put("unknown", -1);
+    }};
+
+    // ==== helper end ====
 }

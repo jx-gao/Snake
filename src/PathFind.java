@@ -16,23 +16,37 @@ public class PathFind {
         this.board = board;
     }
 
+    /**
+     * Workflow to calculate best move based on current board information and returns best possible move, if there's no best move return -1
+     * @return move
+     */
     public int calculateMove(){
         Snake mySnake = snakes[mySnakeNum];
         int move;
+        double[] dists = new double[snakes.length];
+
+        dists = calcDists(dists, apple2coords);
+        boolean closest = isClosest(dists);
 
         if(isPowerAppleOnBoard()){ // go for power apple if it is on the board
             move = aStar(mySnake, apple1coords);
+            //System.out.println("logPower Apple: " + moveToEng.get(move));
+        }else if(isInvisSnakeOnBoard()){
+            move = -1;
+            //System.out.println("logInvisible Snake on board");
         }else{
             move = aStar(mySnake, apple2coords);
+            //System.out.println("logNormal Apple: " + moveToEng.get(move));
         }
-
+        
         if(move == -1){ // follow tail if there's no path to apple's
-            board[mySnake.getTailPos()[1]][mySnake.getTailPos()[0]] = 0; // mark tail as walkable on grid
             move = aStar(mySnake, mySnake.getTailPos());
+            //System.out.println("logFollow Tail: " + moveToEng.get(move));
         }
 
         if(move == -1){ // try survive if there's no path to tail or apple
-            
+            move = survivalInstincts();
+            //System.out.println("logSurvive: " + moveToEng.get(move));
         }
         return move;
     }
@@ -42,6 +56,9 @@ public class PathFind {
      * @return best move, if there is no possible path the method return -1
      */
     private int aStar(Snake snake, int[] goal){
+
+        int[][] closed = new int[board.length][board[0].length];
+
         // get coords of start and goal
         int startX = snake.getHeadPos()[0], startY = snake.getHeadPos()[1];
         int goalX = goal[0], goalY = goal[1];
@@ -55,15 +72,14 @@ public class PathFind {
             Node currN = pq.poll(); // get node with lowest f cost
             int x = currN.x, y = currN.y;
 
-            if(isClosed(x, y)){ // if node has been explored go to start of loop
+            if(isClosed(x, y, closed)){ // if node has been explored go to start of loop
                 continue;
             }
-            setClosed(x, y);
+            setClosed(x, y, closed);
 
             if(goalFound(x, y, goalX, goalY)){
                 while(currN.parentNode.x != startX || currN.parentNode.y != startY){ // backtrack
                     currN = currN.parentNode;
-                    // board[currN.y][currN.x] = 3;
                 }
                 return getMove(currN.x, currN.y);
             }
@@ -71,32 +87,92 @@ public class PathFind {
             // ↑
             if(isTraversable(x, y - 1)){
                 Node newN = new Node(x, y - 1, currN);
-                newN.calculateFcost(currN.g, goalX, goalY);
+                newN.calcFcost(currN.g, goalX, goalY);
                 pq.add(newN);
             }
             // ↓
             if(isTraversable(x, y + 1)){
                 Node newN = new Node(x, y + 1, currN);
-                newN.calculateFcost(currN.g, goalX, goalY);
+                newN.calcFcost(currN.g, goalX, goalY);
                 pq.add(newN);
             }
             // →
             if(isTraversable(x + 1, y)){
                 Node newN = new Node(x + 1, y, currN);
-                newN.calculateFcost(currN.g, goalX, goalY);
+                newN.calcFcost(currN.g, goalX, goalY);
                 pq.add(newN);
             }
             // ←
             if(isTraversable(x - 1, y)){
                 Node newN = new Node(x - 1, y, currN);
-                newN.calculateFcost(currN.g, goalX, goalY);
+                newN.calcFcost(currN.g, goalX, goalY);
                 pq.add(newN);
             }
         }
         return -1; // return -1 if no path is possible
     }
 
+    /**
+     * Algorithm that tells snake to perform zig-zag motion to increase survivability
+     * @return move
+     */
+    private int survivalInstincts(){
+        int currDirection = snakes[mySnakeNum].getCurrDir();
+
+        int[] straight = getStraight(currDirection);
+        int[] left = getLeft(currDirection);
+        int[] right = getRight(currDirection);
+
+        // →
+        if(isTraversable(right[0], right[1])){
+            return getMove(right[0], right[1]);
+        }
+        // ↑ (Straight)
+        if(isTraversable(straight[0], straight[1])){
+            return getMove(straight[0], straight[1]);
+        }
+        // ←
+        if(isTraversable(left[0], left[1])){
+            return getMove(left[0], left[1]);
+        }
+
+        return -1; // gg rip snek
+    }
+
+    
+
     // ==== helper methods ====
+
+    private double calcDist(Snake snake, int[] apple){
+        int startX = snake.getHeadPos()[0], startY = snake.getHeadPos()[1];
+        int goalX = apple[0], goalY = apple[1];
+        return Math.abs(startX - goalX) + Math.abs(startY - goalY);
+    }
+
+    private double[] calcDists(double[] dists, int[] apple){
+        for(int i = 0; i < snakes.length; i++){
+            if(!snakes[i].alive){
+                continue;
+            }
+            if(snakes[i].invisible && i != mySnakeNum){
+                continue;
+            }
+            dists[i] = calcDist(snakes[i], apple);
+        }
+        return dists;
+    }
+
+    private boolean isInvisSnakeOnBoard(){
+        for(int i = 0; i < snakes.length; i++){
+            if(i == mySnakeNum){
+                continue;
+            }
+            if(snakes[i].invisible){
+                return true;
+            }
+        }
+        return false;
+    }
 
     private int getMove(int x, int y){
         int headX = snakes[mySnakeNum].getHeadPos()[0], headY = snakes[mySnakeNum].getHeadPos()[1];
@@ -128,15 +204,87 @@ public class PathFind {
         return true;
     }
 
-    private boolean isClosed(int x, int y){
-        return board[y][x] == 2;
+    private boolean isClosed(int x, int y, int[][] closed){
+        return closed[y][x] == 2;
     }
 
-    private void setClosed(int x, int y){
-        board[y][x] = 2;
+    private void setClosed(int x, int y, int[][] closed){
+        closed[y][x] = 2;
+    }
+    
+    private boolean isPowerAppleOnBoard(){
+        return apple1coords[0] != -1 || apple1coords[1] != -1;
     }
 
-    private  Map<String, Integer> directions = new HashMap<String, Integer>() {{
+    private int[] getStraight(int currDirection){
+        int[] head = snakes[mySnakeNum].getHeadPos();
+        switch(currDirection){
+            case 0: //up
+                head[1] = head[1] - 1;
+                return head;
+            case 1: // down
+                head[1] = head[1] + 1;
+                return head;
+            case 2: // left
+                head[0] = head[0] - 1;
+                return head;
+            case 3: //right
+                head[0] = head[0] + 1;
+                return head;
+        }
+        return head;
+    }
+
+    private int[] getLeft(int currDirection){
+        int[] head = snakes[mySnakeNum].getHeadPos();
+        switch(currDirection){
+            case 0: //up
+                head[0] = head[0] - 1;
+                return head;
+            case 1: // down
+                head[0] = head[0] + 1;
+                return head;
+            case 2: // left
+                head[1] = head[1] + 1;
+                return head;
+            case 3: //right
+                head[1] = head[1] - 1;
+                return head;
+        }
+        return head;
+    }
+
+    private int[] getRight(int currDirection){
+        int[] head = snakes[mySnakeNum].getHeadPos();
+        switch(currDirection){
+            case 0: //up
+                head[0] = head[0] + 1;
+                return head;
+            case 1: // down
+                head[0] = head[0] - 1;
+                return head;
+            case 2: // left
+                head[1] = head[1] - 1;
+                return head;
+            case 3: //right
+                head[1] = head[1] + 1;
+                return head;
+        }
+        return head;
+    }
+
+    private boolean isClosest(double[] dists){
+        double max = dists[0];
+        int snakeNum = 0;
+        for(int i = 1; i < snakes.length; i++){
+            if(max < dists[i]){
+                max = dists[i];
+                snakeNum = i;
+            }
+        }
+        return snakeNum == mySnakeNum;
+    }
+    private Map<String, Integer> directions = new HashMap<String, Integer>() {{
         put("up", 0);
         put("down", 1);
         put("left", 2);
@@ -147,7 +295,13 @@ public class PathFind {
         put("unknown", -1);
     }};
 
-    private boolean isPowerAppleOnBoard(){
-        return apple1coords[0] != -1 || apple1coords[1] != -1;
-    }
+    private Map<Integer, String> moveToEng = new HashMap<Integer, String>() {{
+        put(0, "up");
+        put(1, "down");
+        put(2, "left");
+        put(3, "right");
+        put(-1, "unknown");
+    }};
+
+    // ==== helper end ====
 }
