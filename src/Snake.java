@@ -3,7 +3,7 @@ import java.util.HashMap;
 import java.util.Map;
 public class Snake {
 
-    public boolean alive, invisible;
+    public boolean alive, invisible, turned;
     public int length, kills, topLength;
     public ArrayList<String> snakeCoords;
     public int currDirection;
@@ -15,6 +15,7 @@ public class Snake {
         this.kills = 0;
         this.snakeCoords = new ArrayList<String>();
         this.topLength = 0;
+        this.turned = false;
     }
     
     /**
@@ -34,6 +35,7 @@ public class Snake {
         String[] snakeInfo = snakeLine.split(" ");
         if(snakeInfo[0].equals("dead")){
             this.alive = false;
+            this.turned = false;
             return board;
         }
         if(snakeInfo[0].equals("invisible")){

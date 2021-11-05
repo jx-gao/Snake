@@ -50,8 +50,6 @@ public class MyAgent extends DevelopmentAgent {
                     board = snakes[i].update(snakeLine, board); // Record Snake Info and Update Board
                     if(i != mySnakeNum){ // mark each snake head's neighbours unwalkable to avoid head collisions
                         board = snakes[i].markHeadSurr(board);
-                    }else{
-                        board = snakes[i].markTailWalkable(board);
                     }
                 }
 

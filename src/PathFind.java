@@ -40,13 +40,14 @@ public class PathFind {
         }
         
         if(move == -1){ // follow tail if there's no path to apple's
+            board = mySnake.markTailWalkable(board);
             move = aStar(mySnake, mySnake.getTailPos());
             //System.out.println("logFollow Tail: " + moveToEng.get(move));
         }
 
         if(move == -1){ // try survive if there's no path to tail or apple
             move = survivalInstincts();
-            //System.out.println("logSurvive: " + moveToEng.get(move));
+            System.out.println("logSurvive: " + moveToEng.get(move));
         }
         return move;
     }
@@ -78,6 +79,7 @@ public class PathFind {
             setClosed(x, y, closed);
 
             if(goalFound(x, y, goalX, goalY)){
+                snake.turned = false;
                 while(currN.parentNode.x != startX || currN.parentNode.y != startY){ // backtrack
                     currN = currN.parentNode;
                 }
@@ -123,23 +125,41 @@ public class PathFind {
         int[] left = getLeft(currDirection);
         int[] right = getRight(currDirection);
 
-        // →
-        if(isTraversable(right[0], right[1])){
-            return getMove(right[0], right[1]);
+        if(snakes[mySnakeNum].turned){
+            // →
+            if(isTraversable(right[0], right[1])){
+                snakes[mySnakeNum].turned = false;
+                return getMove(right[0], right[1]);
+            }
+            // ←
+            if(isTraversable(left[0], left[1])){
+                snakes[mySnakeNum].turned = false;
+                return getMove(left[0], left[1]);
+            }
         }
+
         // ↑ (Straight)
         if(isTraversable(straight[0], straight[1])){
             return getMove(straight[0], straight[1]);
         }
+        // →
+        if(isTraversable(right[0], right[1])){
+            snakes[mySnakeNum].turned = true;
+            return getMove(right[0], right[1]);
+        }
         // ←
         if(isTraversable(left[0], left[1])){
+            snakes[mySnakeNum].turned = true;
             return getMove(left[0], left[1]);
         }
 
         return -1; // gg rip snek
     }
 
-    
+    // ↑
+    // ↓
+    // →
+    // ←
 
     // ==== helper methods ====
 
